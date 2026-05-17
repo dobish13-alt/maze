@@ -54,9 +54,9 @@ class Enemy(GameSprite):
             self.rect.x += self.speed
 
 def reset_game():
-    global finish, player, enemy, treasure, lives
+    global finish, player, enemy, treasure, lives, has_key, key_sprite
 
-    
+    has_key = False
     finish = False
     lives = 3
 
@@ -68,6 +68,8 @@ def reset_game():
     player = Player(7, 100, win_h - 150, 'hero.png')
     enemy = Enemy(2, win_w - 200, win_h - 250, 'cyborg.png')
     treasure = GameSprite(0, win_w - 150, win_h - 150, 'treasure.png')
+    key_sprite = GameSprite(0, 200, 100, 'i.jpg') 
+    all_sprites.add(key_sprite)
 
     all_sprites.add(player)
     all_sprites.add(enemy)
@@ -93,6 +95,8 @@ background = transform.scale(image.load('background.jpg'), (win_w, win_h))
 
 all_sprites = sprite.Group()
 walls_group = sprite.Group()
+key_sprite = GameSprite(0, 200, 100, 'i.jpg')  
+all_sprites.add(key_sprite)
 
 
 player = Player(7, 100, win_h - 150, 'hero.png')
@@ -141,7 +145,7 @@ text_lose = font_loser.render('YOU LOSE!', True, (178, 34, 34))
 text_restart = font_restart.render('Press R to play again', True, (255, 255, 255))
 
 
-
+has_key = False
 lives = 3
 game = True
 finish = False
@@ -152,9 +156,9 @@ while game:
     for e in event.get():
         if e.type == QUIT:
             game = False
-        elif finish and e.type == KEYDOWN:  
-            if e.key == K_r: 
-                reset_game()  
+        elif finish and e.type == KEYDOWN:
+            if e.key == K_r:
+                reset_game()
 
     if not finish:
         window.blit(background, (0, 0))
@@ -163,15 +167,31 @@ while game:
         all_sprites.draw(window)
         walls_group.draw(window)
 
-        
+        # Отображаем количество жизней
         text_lives = font_lives.render(f'Lives: {lives}', True, (255, 255, 255))
-
         window.blit(text_lives, (10, 10))
 
-        
-        if sprite.collide_rect(player, treasure):
+        # Отображаем статус ключа (опционально)
+        if has_key:
+            text_key_status = font_lives.render('Key: YES', True, (0, 255, 0))
+        else:
+            text_key_status = font_lives.render('Key: NO', True, (255, 0, 0))
+        window.blit(text_key_status, (10, 50))
+
+        # Проверка подбора ключа
+        if sprite.collide_rect(player, key_sprite):
+            has_key = True
+            key_sprite.kill()
+
+        # Логика игры
+        # Победа возможна только с ключом
+        if sprite.collide_rect(player, treasure) and has_key:
             finish = True
             win_sound.play()
+        elif sprite.collide_rect(player, treasure) and not has_key:
+            # Сообщение о том, что нужен ключ
+            text_no_key = font_lives.render('Get the key first!', True, (255, 0, 0))
+            window.blit(text_no_key, (win_w/2 - text_no_key.get_width()/2, win_h - 50))
         elif sprite.spritecollide(player, walls_group, False) or sprite.collide_rect(player, enemy):
             lives -= 1
             lose_sound.play()
@@ -180,14 +200,13 @@ while game:
             if lives <= 0:
                 finish = True
 
-    else:  
-        if sprite.collide_rect(player, treasure):
+    else:
+        if sprite.collide_rect(player, treasure) and has_key:
             window.blit(text_win, (win_w/2 - text_win.get_width()/2, win_h/2 - 50))
         else:
             if lives <= 0:
                 window.blit(text_lose, (win_w/2 - text_lose.get_width()/2, win_h/2 - 50))
             else:
-                
                 pass
         window.blit(text_restart, (win_w/2 - text_restart.get_width()/2, win_h/2 + 50))
 
